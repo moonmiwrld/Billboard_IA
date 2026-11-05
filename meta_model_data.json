@@ -1,44 +1,41 @@
 import joblib
 import json
 from pathlib import Path
+import pandas as pd
 
-MODEL_DIR = Path("/content/models")
-MODEL_DIR.mkdir(exist_ok=True)
+# Definir nuevas rutas
+base_path = Path("/content/models")
+model_file = base_path / "modelo_billboard.pkl"
+json_file = base_path / "meta_model_data.json"
 
-# Nuevas rutas solicitadas
-NUEVO_MODELO_PATH = MODEL_DIR / "modelo_billboard.pkl"
-NUEVO_JSON_PATH = MODEL_DIR / "meta_model_data.json"
+print("=== REVISANDO Y VERIFICANDO LOS NUEVOS ARCHIVOS ===\n")
 
-# 1. Guardar el objeto unificado (modelo + columnas) con el nuevo nombre
-objeto_unico = {
-    "model": arbol,
-    "columns": list(X.columns)
-}
-joblib.dump(objeto_unico, NUEVO_MODELO_PATH)
-print(f"¡Modelo guardado correctamente en: {NUEVO_MODELO_PATH}!")
+todos_existen = True
+for archivo in [model_file, json_file]:
+    if archivo.exists():
+        print(f"✅ {archivo.name} existe correctamente.")
+    else:
+        print(f"❌ ERROR: {archivo.name} NO se encuentra.")
+        todos_existen = False
 
-# 2. Generar y guardar el nuevo archivo JSON de metadatos
-metadata_renombrada = {
-    "nombre_proyecto": "Billboard Arboles de Decision",
-    "tipo_modelo": "DecisionTreeClassifier",
-    "hiperparametros": {
-        "max_depth": 4,
-        "min_samples_leaf": 10,
-        "random_state": 30
-    },
-    "metricas_evaluacion": {
-        "accuracy_test": 0.764,
-        "precision_global": 0.76,
-        "recall_global": 0.76
-    },
-    "variables_entrada": columnas_modelo,
-    "columnas_entrenamiento_dummies": list(X.columns),
-    "archivos_relacionados": {
-        "modelo_completo_pkl": "/content/models/modelo_billboard.pkl"
-    }
-}
+if todos_existen:
+    print("\n--- Cargando y Probando Contenido Unificado ---")
+    try:
+        # Probar JSON
+        with open(json_file, "r", encoding="utf-8") as f:
+            meta_loaded = json.load(f)
+        print("✅ JSON de metadatos cargado con éxito.")
+        print(f"   - Archivo de modelo mapeado: {meta_loaded['archivos_relacionados']['modelo_completo_pkl']}")
 
-with open(NUEVO_JSON_PATH, "w", encoding="utf-8") as f:
-    json.dump(metadata_renombrada, f, ensure_ascii=False, indent=4)
+        # Probar PKL Unificado
+        recursos = joblib.load(model_file)
+        model_loaded = recursos["model"]
+        cols_loaded = recursos["columns"]
+        print(f"✅ Archivo PKL unificado cargado. (Total columnas: {len(cols_loaded)})")
 
-print(f"¡Metadatos guardados correctamente en: {NUEVO_JSON_PATH}!")
+        # Prueba de predicción rápida
+        test_df = pd.DataFrame([X_test.iloc[0]])
+        pred = model_loaded.predict(test_df)[0]
+        print(f"\n🎉 Pruebas superadas con éxito. Predicción de test correcta: {pred}")
+    except Exception as e:
+        print(f"❌ Error al verificar archivos: {str(e)}")
