@@ -1,61 +1,73 @@
-import json
-import joblib
-import numpy as np
-import openai
+%%writefile app.py
+import streamlit as st
 import pandas as pd
 import pickle
-import sklearn
-import streamlit as st
+from pathlib import Path
 
 st.set_page_config(
-    page_title="Billboard Machine Learning App", page_icon="🎵", layout="wide"
+    page_title="Predicción Billboard Top 1",
+    page_icon="🎵",
+    layout="centered"
 )
 
-st.title("🎵 Billboard ML Predictor & Analysis App")
+# Encabezado principal
+st.title("🎵 Billboard Top 1 Predictor")
+st.markdown("### **Creadora: Luna Dubon**")
+st.write("¡Bienvenido! Esta aplicación utiliza el último árbol de decisión entrenado para predecir si una canción tiene el potencial de alcanzar el puesto #1 en la lista Billboard.")
 
-# Cargar metadatos desde el archivo JSON de configuración del modelo
-try:
-    with open("meta_model_data.json", "r", encoding="utf-8") as f:
-        meta_data = json.load(f)
+# Ruta del último archivo único consolidado exportado en la raíz
+MODEL_PATH = Path("modelo_billboard.pkl")
 
-    st.sidebar.header("📌 Meta Data del Modelo")
-    st.sidebar.markdown(f"**Modelo:** {meta_data.get('model_name')}")
-    st.sidebar.markdown(f"**Versión:** {meta_data.get('version')}")
-    st.sidebar.markdown(f"**Target:** `{meta_data.get('target')}`")
-    st.sidebar.markdown("**Features:**")
-    for feat in meta_data.get("features", []):
-        st.sidebar.markdown(f"- {feat}")
-except FileNotFoundError:
-    st.sidebar.warning("No se encontró el archivo meta_model_data.json")
+@st.cache_resource
+def cargar_recursos():
+    if not MODEL_PATH.exists():
+        return None, None
+    # Cargar el diccionario unificado usando pickle
+    with open(MODEL_PATH, "rb") as f:
+        recursos = pickle.load(f)
+    modelo = recursos["modelo"]
+    columnas = recursos["columnas"]
+    return modelo, columnas
 
-# Cargar el archivo .pkl (dataset o modelo entrenado del .ipynb)
-st.subheader("📊 Contenido del Archivo Pickle (.pkl)")
+modelo, columnas_entrenamiento = cargar_recursos()
 
-try:
-    with open("billboard_model_data.pkl", "rb") as f:
-        model_or_data = pickle.load(f)
+if modelo is None or columnas_entrenamiento is None:
+    st.error("❌ No se encontró el archivo consolidado del modelo 'modelo_billboard.pkl' en la raíz.")
+else:
+    st.sidebar.header("⚙️ Atributos de la Canción")
+    duration_seg = st.sidebar.number_input("Duración (segundos)", min_value=1, max_value=5000, value=200, step=10)
+    artist_type = st.sidebar.selectbox("Tipo de Artista", ["Male", "Female", "Mixed"])
+    tempo = st.sidebar.selectbox("Tempo de la canción", ["Medium Tempo", "Slow Tempo", "Fast Tempo"])
+    genre = st.sidebar.selectbox("Género musical", [
+        "Urban", "Pop", "Traditional", "Alternative & Punk",
+        "Electronica", "Rock", "Other", "Soundtrack", "Jazz"
+    ])
+    mood = st.sidebar.selectbox("Estado de ánimo (Mood)", [
+        "Brooding", "Energizing", "Excited", "Yearning", "Romantic",
+        "Peaceful", "Sophisticated", "Sentimental", "Defiant", "Easygoing",
+        "Empowering", "Fiery", "Gritty", "Lively", "Melancholy", "Other",
+        "Rowdy", "Sensual", "Upbeat", "Urgent"
+    ])
 
-    st.success("¡Archivo .pkl cargado exitosamente!")
+    datos_usuario = pd.DataFrame([{
+        "artist_type": artist_type,
+        "tempo": tempo,
+        "genre": genre,
+        "mood": mood,
+        "durationSeg": duration_seg
+    }])
 
-    # Si el archivo es un DataFrame (como el dataset procesado en el .ipynb)
-    if isinstance(model_or_data, pd.DataFrame):
-        st.write("### Vista previa del DataFrame")
-        st.dataframe(model_or_data.head())
+    datos_procesados = pd.get_dummies(datos_usuario)
+    datos_procesados = datos_procesados.reindex(columns=columnas_entrenamiento, fill_value=0)
 
-        st.info(
-            f"El dataset contiene {model_or_data.shape[0]} filas y"
-            f" {model_or_data.shape[1]} columnas."
-        )
-    else:
-        # Si es un modelo de Scikit-Learn entrenado guardado con pickle o joblib
-        st.write("### Objeto del Modelo Cargado")
-        st.write(f"Tipo de objeto: {type(model_or_data)}")
-        st.write(
-            "El modelo está listo para realizar inferencias con las librerías"
-            " configuradas."
-        )
+    st.subheader("🎧 Datos ingresados:")
+    st.dataframe(datos_usuario)
 
-except FileNotFoundError:
-    st.info("Coloca tu archivo 'billboard_model_data.pkl' en el repositorio.")
-except Exception as e:
-    st.error(f"Error al cargar el archivo .pkl: {e}")
+    if st.button("🔮 Predecir éxito", use_container_width=True):
+        prediccion = modelo.predict(datos_procesados)[0]
+        st.markdown("--- ")
+        if prediccion == 1:
+            st.balloons()
+            st.success("🎉 **¡SÍ PUEDE LLEGAR AL TOP 1!** El modelo estima que esta canción tiene las características de un hit masivo.")
+        else:
+            st.warning("⚠️ **No se predice que llegue al Top 1.**")
