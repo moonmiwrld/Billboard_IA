@@ -56,7 +56,6 @@
         "mood_Yearning"
     ],
     "archivos_relacionados": {
-        "modelo_pkl": "/content/models/modelo_arbol_billboard.pkl",
-        "columnas_pkl": "/content/models/columnas_modelo_billboard.pkl"
+        "modelo_completo_pkl": "/content/models/modelo_completo_billboard.pkl"
     }
 }
