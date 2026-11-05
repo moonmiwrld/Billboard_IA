@@ -1,4 +1,24 @@
-{
+import joblib
+import json
+from pathlib import Path
+
+MODEL_DIR = Path("/content/models")
+MODEL_DIR.mkdir(exist_ok=True)
+
+# Nuevas rutas solicitadas
+NUEVO_MODELO_PATH = MODEL_DIR / "modelo_billboard.pkl"
+NUEVO_JSON_PATH = MODEL_DIR / "meta_model_data.json"
+
+# 1. Guardar el objeto unificado (modelo + columnas) con el nuevo nombre
+objeto_unico = {
+    "model": arbol,
+    "columns": list(X.columns)
+}
+joblib.dump(objeto_unico, NUEVO_MODELO_PATH)
+print(f"¡Modelo guardado correctamente en: {NUEVO_MODELO_PATH}!")
+
+# 2. Generar y guardar el nuevo archivo JSON de metadatos
+metadata_renombrada = {
     "nombre_proyecto": "Billboard Arboles de Decision",
     "tipo_modelo": "DecisionTreeClassifier",
     "hiperparametros": {
@@ -11,51 +31,14 @@
         "precision_global": 0.76,
         "recall_global": 0.76
     },
-    "variables_entrada": [
-        "artist_type",
-        "tempo",
-        "genre",
-        "mood",
-        "durationSeg"
-    ],
-    "columnas_entrenamiento_dummies": [
-        "durationSeg",
-        "artist_type_Male",
-        "artist_type_Mixed",
-        "tempo_Medium Tempo",
-        "tempo_Slow Tempo",
-        "genre_Electronica",
-        "genre_Jazz",
-        "genre_Other",
-        "genre_Pop",
-        "genre_Rock",
-        "genre_Soundtrack",
-        "genre_Traditional",
-        "genre_Urban",
-        "mood_Brooding",
-        "mood_Cool",
-        "mood_Defiant",
-        "mood_Easygoing",
-        "mood_Empowering",
-        "mood_Energizing",
-        "mood_Excited",
-        "mood_Fiery",
-        "mood_Gritty",
-        "mood_Lively",
-        "mood_Melancholy",
-        "mood_Other",
-        "mood_Peaceful",
-        "mood_Romantic",
-        "mood_Rowdy",
-        "mood_Sensual",
-        "mood_Sentimental",
-        "mood_Sophisticated",
-        "mood_Stirring",
-        "mood_Upbeat",
-        "mood_Urgent",
-        "mood_Yearning"
-    ],
+    "variables_entrada": columnas_modelo,
+    "columnas_entrenamiento_dummies": list(X.columns),
     "archivos_relacionados": {
         "modelo_completo_pkl": "/content/models/modelo_billboard.pkl"
     }
 }
+
+with open(NUEVO_JSON_PATH, "w", encoding="utf-8") as f:
+    json.dump(metadata_renombrada, f, ensure_ascii=False, indent=4)
+
+print(f"¡Metadatos guardados correctamente en: {NUEVO_JSON_PATH}!")
