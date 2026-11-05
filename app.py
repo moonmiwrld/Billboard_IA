@@ -1,16 +1,19 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pickle
 import json
+import joblib
+import numpy as np
+import openai
+import pandas as pd
+import pickle
+import sklearn
+import streamlit as st
 
-st.set_page_config(page_title="Billboard Data Analysis", page_icon="🎵", layout="wide")
+st.set_page_config(
+    page_title="Billboard Machine Learning App", page_icon="🎵", layout="wide"
+)
 
-st.title("🎵 Billboard Data Analysis & Model Dashboard")
+st.title("🎵 Billboard ML Predictor & Analysis App")
 
-# Cargar metadatos JSON
+# Cargar metadatos desde el archivo JSON de configuración del modelo
 try:
     with open("meta_model_data.json", "r", encoding="utf-8") as f:
         meta_data = json.load(f)
@@ -25,34 +28,34 @@ try:
 except FileNotFoundError:
     st.sidebar.warning("No se encontró el archivo meta_model_data.json")
 
-# Cargar y desplegar archivo .pkl
-st.subheader("📊 Análisis del Dataset (Pickle .pkl)")
+# Cargar el archivo .pkl (dataset o modelo entrenado del .ipynb)
+st.subheader("📊 Contenido del Archivo Pickle (.pkl)")
 
 try:
     with open("billboard_model_data.pkl", "rb") as f:
-        df = pickle.load(f)
+        model_or_data = pickle.load(f)
 
-    st.success("¡Archivo .pkl cargado correctamente!")
+    st.success("¡Archivo .pkl cargado exitosamente!")
 
-    if isinstance(df, pd.DataFrame):
-        st.write("### Vista previa de los datos")
-        st.dataframe(df.head())
+    # Si el archivo es un DataFrame (como el dataset procesado en el .ipynb)
+    if isinstance(model_or_data, pd.DataFrame):
+        st.write("### Vista previa del DataFrame")
+        st.dataframe(model_or_data.head())
 
-        # Visualización usando matplotlib y seaborn (librerías del ipynb)
-        st.write("### Visualización de Datos (Seaborn & Matplotlib)")
-        fig, ax = plt.subplots(figsize=(8, 4))
-        if 'rank' in df.columns:
-            sns.histplot(df['rank'], kde=True, ax=ax, color='purple')
-            ax.set_title("Distribución de Rankings")
-        else:
-            sns.countplot(x=df.iloc[:, 0], ax=ax)
-            ax.set_title("Frecuencia de datos")
-        
-        st.pyplot(fig)
+        st.info(
+            f"El dataset contiene {model_or_data.shape[0]} filas y"
+            f" {model_or_data.shape[1]} columnas."
+        )
     else:
-        st.write(df)
+        # Si es un modelo de Scikit-Learn entrenado guardado con pickle o joblib
+        st.write("### Objeto del Modelo Cargado")
+        st.write(f"Tipo de objeto: {type(model_or_data)}")
+        st.write(
+            "El modelo está listo para realizar inferencias con las librerías"
+            " configuradas."
+        )
 
 except FileNotFoundError:
-    st.info("Coloca tu archivo 'billboard_model_data.pkl' en el mismo directorio.")
+    st.info("Coloca tu archivo 'billboard_model_data.pkl' en el repositorio.")
 except Exception as e:
     st.error(f"Error al cargar el archivo .pkl: {e}")
